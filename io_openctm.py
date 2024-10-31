@@ -5,7 +5,7 @@ from .openctm import *
 from bpy.props import StringProperty
 
 class OpenCTMImport(bpy.types.Operator, ImportHelper):
-    """Import from My Plugin Format"""
+    """Import from OpenCTM Format"""
     bl_idname = "import.openctm"
     bl_label = "Import from OpenCTM Format"
 
