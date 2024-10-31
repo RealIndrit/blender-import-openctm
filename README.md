@@ -1,7 +1,7 @@
 Import OpenCTM (.ctm)
 ====================
 
-This Blender plugin allows you to import files in OpenCTM format.
+This Blender plugin (add-on) allows you to import files in OpenCTM format.
 
 ## Usage
 
