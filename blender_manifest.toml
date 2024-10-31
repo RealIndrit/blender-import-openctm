@@ -8,7 +8,7 @@ type = "add-on"
 tags = ["Import-Export"]
 blender_version_min = "4.2.0"
 license = ["SPDX:GPL-3.0-or-later"]
-#website = ""
+website = "https://github.com/RealIndrit/blender-import-openctm"
 copyright = ["2024 RealIndrit"]
 platforms = ["windows-x64"]
 [permissions]
