@@ -29,5 +29,6 @@ Install dev build:
 
 # Disclaimer
 
-Plugin prepackages OpenCTM.dll lib. If you do not trust this file (it is unmodified).
+Plugin prepackages OpenCTM.dll (df04ff1b749e0c66ad72882cc9bccf01 MD5) lib. If you do not trust this file (it is unmodified).
 You are free to get your own at [sourceforge](https://sourceforge.net/projects/openctm/)
+or compile [source](https://github.com/Danny02/OpenCTM) yourself 
