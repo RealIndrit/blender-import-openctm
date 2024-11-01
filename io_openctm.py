@@ -6,7 +6,7 @@ from bpy.props import StringProperty
 
 class OpenCTMImport(bpy.types.Operator, ImportHelper):
     """Import from OpenCTM Format"""
-    bl_idname = "import.openctm"
+    bl_idname = "import_scene.openctm"
     bl_label = "Import from OpenCTM Format"
 
     filename_ext = ".ctm"
@@ -48,6 +48,9 @@ class OpenCTMImport(bpy.types.Operator, ImportHelper):
 
             # Update the mesh with new data
             mesh.update()
+
+            # Select the imported object
+            obj.select_set(True)
 
         finally:
             ctmFreeContext(ctm_context)
