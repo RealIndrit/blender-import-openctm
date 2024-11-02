@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 id = "import_openctm_ctm"
 name = "Import OpenCTM (.ctm)"
-version = "1.0.0"
+version = "1.0.1"
 tagline = "Import meshes from OpenCTM (.ctm)"
 maintainer = "Community"
 type = "add-on"

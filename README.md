@@ -1,14 +1,16 @@
 Import OpenCTM (.ctm)
 ====================
 
-This Blender plugin (add-on) allows you to import files in OpenCTM format.
+This Blender plugin (add-on) allows you to import files in OpenCTM file format.
 
 ![Example of imported model view](assets/big_workspace.png)
 ![Import option](assets/small_workspace.png)
 
 ## Usage
 
-- Go to [Blender Extension Website](https://extensions.blender.org/approval-queue/import-openctm-ctm/#about) and download/install the Plugin
+- Downalod
+  - Go to [Blender Extension Website](https://extensions.blender.org/approval-queue/import-openctm-ctm/#about) and download/install the Plugin (If available there) OR:
+  - Download from the release tags here on [GitHub](https://github.com/RealIndrit/blender-import-openctm/releases/tag/1.0.1)
 - To import: File > Import > OpenCTM (.ctm)
 
 **Note** Model might be scaled in weird way when imported, make sure to scale it to viewport size after importing it, 
