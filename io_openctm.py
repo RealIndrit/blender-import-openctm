@@ -17,6 +17,12 @@ class OpenCTMImport(bpy.types.Operator, ImportHelper):
     )
 
     def execute(self, context):
+        # Ensure there's at least one object
+        if bpy.data.objects:
+            if bpy.context.object and bpy.context.object.mode != 'OBJECT':
+                bpy.ops.object.mode_set(mode='OBJECT')
+            bpy.ops.object.select_all(action='DESELECT')
+
         ctm_context = ctmNewContext(CTM_IMPORT)
         try:
             ctmLoad(ctm_context, _encode(self.filepath))
