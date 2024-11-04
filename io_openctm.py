@@ -53,44 +53,29 @@ class OpenCTMImport(bpy.types.Operator, ImportHelper):
             # Validate mesh
             mesh.validate()
 
-            bm = bmesh.new()
-            bm.from_mesh(mesh)
-
-            # Ensure the BMesh is valid
-            bm.normal_update()
-
-            if ctmGetInteger(ctm_context, CTM_HAS_NORMALS) == CTM_TRUE:
-                print("NORMALS")
-
-                normal_ctm = ctmGetFloatArray(ctm_context, CTM_NORMALS)
-                normals = np.fromiter(normal_ctm, dtype=float,
-                                    count=vertex_count * 3).reshape((-1, 3))
-
-                print(normals, len(normals))
-
-
-            bm.faces.ensure_lookup_table()
+            # Could be cooked, UNTESTED
             if ctmGetInteger(ctm_context, CTM_UV_MAP_COUNT) > 0:
-                print("UV MAP")
-                uv_layer = bm.loops.layers.uv.new()
-                uv_coords = ctmGetFloatArray(ctm_context, CTM_UV_MAP_1)
-                uvs = np.fromiter(uv_coords, count=face_count, dtype=float).reshape((-1, 2))
-                print(uvs, len(uvs))
+                for map_index in range(8):
+                    uv_layer = mesh.uv_layers.new(name=f"UV{map_index}")
+                    uv_coords = ctmGetFloatArray(ctm_context, (0x0700 + map_index))
+                    if uv_coords:
+                        uvs = np.fromiter(uv_coords, count=face_count, dtype=float).reshape((-1, 2))
 
-            # # Get colour map
+                        for vertexIndex in range(len(uvs)):
+                            cur_uvs = uvs[vertexIndex]
+                            uv_layer.data[vertexIndex].uv = cur_uvs
+
+            # Get colour map UNTESTED
             colour_map = ctmGetNamedAttribMap(ctm_context, c_char_p(_encode('Color')))
             if colour_map != CTM_FALSE:
-                print("Colours")
-                colour_layer = bm.loops.layers.color.new()
                 colours = ctmGetFloatArray(ctm_context, colour_map)
                 colours = np.array(colours).reshape(-1, 4)
-                print(colours, len(colours))
 
-            # # Validate mesh
-            # mesh.validate()
-
-            bm.to_mesh(mesh)
-            bm.free()
+                if colours:
+                    for color_3_index in range(len(colours)):
+                        color_3_layer = mesh.vertex_colors.new(name=f"rgb{color_3_index}")
+                        cur_col_3 = colours[color_3_index]
+                        color_3_layer.data[color_3_index].color = [cur_col_3[0], cur_col_3[1], cur_col_3[2], 0]
 
             # Update the mesh with new data
             mesh.update()
