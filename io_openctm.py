@@ -22,6 +22,7 @@ class OpenCTMImport(bpy.types.Operator, ImportHelper):
 
     uv_pref = BoolProperty(name="UV", description="Import UV", default=True)
     colour_pref = BoolProperty(name="Color", description="Import vertex colors", default=True)
+    select_pref = BoolProperty(name="Select", description="Select imported object after completion", default=True)
 
     def invoke(self, context, event):
         context.window_manager.fileselect_add(self)
@@ -33,6 +34,7 @@ class OpenCTMImport(bpy.types.Operator, ImportHelper):
         box.prop(self, "axis_up")
         box.prop(self, "uv_pref")
         box.prop(self, "colour_pref")
+        box.prop(self, "select_pref")
 
     def execute(self, context):
         # Ensure there's at least one object
@@ -107,8 +109,9 @@ class OpenCTMImport(bpy.types.Operator, ImportHelper):
             mesh_obj = bpy.data.objects.new(name="ImportedObject", object_data=mesh)
             mesh_obj.data.transform(transform_matrix)
             bpy.context.scene.collection.objects.link(mesh_obj)
-            # Select the imported object
-            mesh_obj.select_set(True)
+
+            if self.select_pref:
+                mesh_obj.select_set(True)
 
         finally:
             ctmFreeContext(ctm_context)
