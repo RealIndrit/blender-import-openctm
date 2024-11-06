@@ -30,6 +30,8 @@ class OpenCTMImport(bpy.types.Operator, ImportHelper):
             if err != CTM_NONE:
                 raise IOError("Error loading file: %s" % str(ctmErrorString(err)))
 
+            mesh = bpy.data.meshes.new(name="ImportedMesh")
+
             # read vertices
             vertex_count = ctmGetInteger(ctm_context, CTM_VERTEX_COUNT)
             vertex_ctm = ctmGetFloatArray(ctm_context, CTM_VERTICES)
@@ -44,19 +46,43 @@ class OpenCTMImport(bpy.types.Operator, ImportHelper):
             faces = np.fromiter(face_ctm, dtype=int,
                                 count=face_count * 3).reshape((-1, 3))
 
-            mesh = bpy.data.meshes.new(name="ImportedMesh")
-            obj = bpy.data.objects.new(name="ImportedObject", object_data=mesh)
+            mesh.from_pydata(vertices=vertices, edges=[], faces=faces)
 
-            # Link the object to the collection in the current scene
-            bpy.context.collection.objects.link(obj)
+            if ctmGetInteger(ctm_context, CTM_UV_MAP_COUNT) > 0:
+                for map_index in range(8):
+                    uv_coords = ctmGetFloatArray(ctm_context, (0x0700 + map_index))
+                    if uv_coords:
+                        uv_name = ctmGetUVMapString(ctm_context, (0x0700 + map_index), CTM_NAME)
+                        uv_coords = np.fromiter(uv_coords, dtype=float, count=vertex_count * 2).reshape((-1, 2))
+                        uv_name = uv_name.decode("utf-8") + f"{map_index}"
+                        uv_layer = mesh.uv_layers.new(name=f"UV{uv_name}")
 
-            mesh.from_pydata(vertices, [], faces)
+                        for poly in mesh.polygons:
+                            for loop_index in poly.loop_indices:
+                                vertex_index = mesh.loops[loop_index].vertex_index
+                                uv = uv_coords[vertex_index]
+                                uv_layer.data[loop_index].uv = (uv[0], uv[1])
 
-            # Update the mesh with new data
+            colour_map = ctmGetNamedAttribMap(ctm_context, c_char_p(_encode('Color')))
+            if colour_map != CTM_FALSE:
+                color_3_layer = mesh.vertex_colors.new(name=f"RGBA")
+                colours = ctmGetFloatArray(ctm_context, colour_map)
+                colours = np.fromiter(colours, count=vertex_count * 4, dtype=float).reshape((-1, 4))
+
+                for poly in mesh.polygons:
+                    for loop_index in poly.loop_indices:
+                        vertex_index = mesh.loops[loop_index].vertex_index
+                        color = colours[vertex_index]
+                        color_3_layer.data[loop_index].color = (color[0], color[1], color[2], color[3])
+
+                mesh.vertex_colors.active = color_3_layer
             mesh.update()
 
+
+            mesh_obj = bpy.data.objects.new(name="ImportedObject", object_data=mesh)
+            bpy.context.scene.collection.objects.link(mesh_obj)
             # Select the imported object
-            obj.select_set(True)
+            mesh_obj.select_set(True)
 
         finally:
             ctmFreeContext(ctm_context)
