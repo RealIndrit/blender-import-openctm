@@ -63,6 +63,19 @@ class OpenCTMImport(bpy.types.Operator, ImportHelper):
                                 uv = uv_coords[vertex_index]
                                 uv_layer.data[loop_index].uv = (uv[0], uv[1])
 
+            colour_map = ctmGetNamedAttribMap(ctm_context, c_char_p(_encode('Color')))
+            if colour_map != CTM_FALSE:
+                color_3_layer = mesh.vertex_colors.new(name=f"RGBA")
+                colours = ctmGetFloatArray(ctm_context, colour_map)
+                colours = np.fromiter(colours, count=vertex_count * 4, dtype=float).reshape((-1, 4))
+
+                for poly in mesh.polygons:
+                    for loop_index in poly.loop_indices:
+                        vertex_index = mesh.loops[loop_index].vertex_index
+                        color = colours[vertex_index]
+                        color_3_layer.data[loop_index].color = (color[0], color[1], color[2], color[3])
+
+                mesh.vertex_colors.active = color_3_layer
             mesh.update()
 
 
