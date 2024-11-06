@@ -3,16 +3,28 @@ Import OpenCTM (.ctm)
 
 This Blender plugin (add-on) allows you to import files in OpenCTM file format.
 
-![Example of imported model view](assets/big_workspace.png)
-![Import option](assets/small_workspace.png)
+## What it imports:
+- Meshdata
+- UV Coordinates
+- Color Data (attributemap with name 'Color' with data RGBA)
+
+## Install
+- Blender > Edit > Preferences > Add-Ons > Install from disk > .zip file
 
 ## Usage
 
-- Download from the release tags here on [GitHub](https://github.com/RealIndrit/blender-openctm/releases/tag/1.0.1)
+- Download from the release tags here on [GitHub](https://github.com/RealIndrit/blender-openctm/releases/tag/1.1.0)
 - To import: File > Import > OpenCTM (.ctm)
 
-**Note** Model might be scaled in weird way when imported, make sure to scale it to viewport size after importing it, 
-also normals might be scuffed, fix it by force a recalculate normals in Blender.
+
+## Showcase
+![Example of imported model view](assets/big_workspace.png)
+![Example of UV view](assets/workview_uv.png)
+![Old Man model with color data](assets/old_man_big.png)
+
+**Note** Some probles that might occur
+- Model might be scaled weird way when imported, make sure to scale it to viewport size after importing it. 
+- Normals might be flipped, fix it by force a recalculate normals in Blender.
 
 
 ## Dev notes
