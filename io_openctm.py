@@ -14,7 +14,6 @@ class OpenCTMImport(bpy.types.Operator, ImportHelper):
     """Import from OpenCTM Format"""
     bl_idname = "import_scene.openctm"
     bl_label = "Import OpenCTM"
-    bl_options = {"REGISTER", "UNDO"}
     filename_ext = ".ctm"
 
     filepath: bpy.props.StringProperty(subtype="FILE_PATH")
@@ -23,10 +22,6 @@ class OpenCTMImport(bpy.types.Operator, ImportHelper):
     uv_pref = BoolProperty(name="UV", description="Import UV", default=True)
     colour_pref = BoolProperty(name="Color", description="Import vertex colors", default=True)
     select_pref = BoolProperty(name="Select", description="Select imported object after completion", default=True)
-
-    def invoke(self, context, event):
-        context.window_manager.fileselect_add(self)
-        return {"RUNNING_MODAL"}
 
     def draw(self, context):
         box = self.layout.box()
@@ -119,22 +114,19 @@ class OpenCTMImport(bpy.types.Operator, ImportHelper):
         self.report({'INFO'}, "Imported: " + self.filepath)
         return {'FINISHED'}
 
+@orientation_helper(axis_forward="Z", axis_up="Y")
 class OpenCTMExport(bpy.types.Operator, ImportHelper):
     """Export to OpenCTM Format"""
     bl_idname = "export_scene.openctm"
     bl_label = "Export OpenCTM"
 
     filename_ext = ".ctm"
-
+    filepath: bpy.props.StringProperty(subtype="FILE_PATH")
     filter_glob = bpy.props.StringProperty(default="*.ctm", options={'HIDDEN'})
 
     uv_pref = BoolProperty(name="UV", description="Export UV", default=True)
     normal_pref = BoolProperty(name="UV", description="Export Normals", default=True)
     colour_pref = BoolProperty(name="Color", description="Export Vertex colors", default=True)
-
-    def invoke(self, context, event):
-        context.window_manager.fileselect_add(self)
-        return {'RUNNING_MODAL'}
 
     def draw(self, context):
         box = self.layout.box()
@@ -148,9 +140,28 @@ class OpenCTMExport(bpy.types.Operator, ImportHelper):
         print(f"Exporting to {filepath}")
         print(f"UV Preference: {self.uv_pref}")
         print(f"Color Preference: {self.colour_pref}")
-        # Add your export code here
-        self.report({'INFO'}, "Exported: " + self.filepath)
-        return {'FINISHED'}
+
+        transform_matrix = axis_conversion(
+            from_forward=self.axis_forward,
+            from_up=self.axis_up,
+        ).to_4x4()
+
+        active_object = bpy.context.active_object
+
+        if active_object is not None:
+            if len(bpy.context.selected_objects) == 1:
+                active_object.data.transform(transform_matrix)
+                self.report({'INFO'}, f"Exported: {self.filepath}")
+                return {'FINISHED'}
+            elif len(bpy.context.selected_objects) > 1:
+                self.report({'ERROR'}, "Multiple objects selected, only one object per export allowed")
+                return {'CANCELLED'}
+            elif len(bpy.context.selected_objects) < 1:
+                self.report({'ERROR'}, "No object selected")
+                return {'CANCELLED'}
+        else:
+            self.report({'ERROR'}, f"No object selected")
+            return {'CANCELLED'}
 
 def _encode(_filename):
     try:
