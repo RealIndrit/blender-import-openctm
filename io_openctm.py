@@ -82,7 +82,10 @@ class OpenCTMImport(bpy.types.Operator, ImportHelper):
                         if uv_coords:
                             uv_name = ctmGetUVMapString(ctm_context, (0x0700 + map_index), CTM_NAME)
                             uv_coords = np.fromiter(uv_coords, dtype=float, count=vertex_count * 2).reshape((-1, 2))
-                            uv_name = uv_name.decode("utf-8") + f"{map_index}"
+                            if uv_name:
+                                uv_name = uv_name.decode("utf-8") + f"{map_index}"
+                            else:
+                                uv_name = f"{map_index}"
                             uv_layer = mesh.uv_layers.new(name=f"UV{uv_name}")
 
                             for poly in mesh.polygons:
@@ -135,8 +138,8 @@ class OpenCTMExport(bpy.types.Operator, ImportHelper):
     normal_pref: BoolProperty(name="Normal", description="Export Normals", default=True)
     colour_pref: BoolProperty(name="Color", description="Export Vertex colors", default=True)
     compression_pref: EnumProperty(
-        name="Compression Algorithm",
-        description="What type of compression the file use",
+        name="Algorithm",
+        description="What type of compression algorithm the file use",
         items=[("MG1", "MG1", "MG1 Compression"),
                ("MG2", "MG2", "MG2 Compression"),
                ("RAW", "Uncompressed", "No Compression (Raw)"),],
@@ -218,22 +221,20 @@ class OpenCTMExport(bpy.types.Operator, ImportHelper):
                     else:
                         triangle_count += 1
 
-                print(triangle_count)
-                p_indices = cast((c_int * 3 * triangle_count)(), POINTER(c_int))
+                p_indices = cast((c_uint * 3 * triangle_count)(), POINTER(c_uint))
 
                 for i, f in enumerate(mesh.polygons):
-                    p_indices[3 * i] = ctypes.c_int(f.vertices[0])
-                    p_indices[3 * i + 1] = ctypes.c_int(f.vertices[1])
-                    p_indices[3 * i + 2] = ctypes.c_int(f.vertices[2])
+                    p_indices[3 * i] = ctypes.c_uint(f.vertices[0])
+                    p_indices[3 * i + 1] = ctypes.c_uint(f.vertices[1])
+                    p_indices[3 * i + 2] = ctypes.c_uint(f.vertices[2])
                     if len(f.vertices) == 4:
-                        p_indices[3 * (i + 1)] = ctypes.c_int(f.vertices[0])
-                        p_indices[3 * (i + 1) + 1] = ctypes.c_int(f.vertices[2])
-                        p_indices[3 * (i + 1) + 2] = ctypes.c_int(f.vertices[3])
+                        p_indices[3 * (i + 1)] = ctypes.c_uint(f.vertices[0])
+                        p_indices[3 * (i + 1) + 1] = ctypes.c_uint(f.vertices[2])
+                        p_indices[3 * (i + 1) + 2] = ctypes.c_uint(f.vertices[3])
                         i += 1
 
                 # Extract vertex array from the Blender mesh
                 vertex_count = len(mesh.vertices)
-                print(vertex_count)
                 p_vertices = cast((c_float * 3 * vertex_count)(), POINTER(c_float))
 
                 for i, v in enumerate(mesh.vertices):
@@ -241,53 +242,57 @@ class OpenCTMExport(bpy.types.Operator, ImportHelper):
                     p_vertices[3 * i + 1] = ctypes.c_float(v.co.y)
                     p_vertices[3 * i + 2] = ctypes.c_float(v.co.z)
 
+                # Extract normals
+                if self.normal_pref:
+                    p_normals = (ctypes.c_float * (3 * vertex_count))()
+                    for i, v in enumerate(mesh.vertices):
+                        p_normals[3 * i] = ctypes.c_float(v.normal.x)
+                        p_normals[3 * i + 1] = ctypes.c_float(v.normal.y)
+                        p_normals[3 * i + 2] = ctypes.c_float(v.normal.z)
+                else:
+                    p_normals = ctypes.POINTER(ctypes.c_float)()
+
+                # Extract UVs
+                if self.uv_pref:
+                    p_UV_coords = (ctypes.c_float * (2 * vertex_count))()
+
+                    if hasattr(mesh, "uv_layers") and mesh.uv_layers:
+                        uv_layer = mesh.uv_layers.active.data
+
+                        for f in mesh.polygons:
+                            for j, loop_index in enumerate(f.loop_indices):
+                                k = mesh.loops[loop_index].vertex_index
+                                if k < vertex_count:
+                                    uv = uv_layer[loop_index].uv
+                                    p_UV_coords[k * 2] = ctypes.c_float(uv[0])
+                                    p_UV_coords[k * 2 + 1] = ctypes.c_float(uv[1])
+
+                    else:
+                        i = 0
+                        for v in mesh.vertices:
+                            if hasattr(v, "uvco"):
+                                p_UV_coords[i] = ctypes.c_float(v.uvco[0])
+                                p_UV_coords[i + 1] = ctypes.c_float(v.uvco[1])
+                                i += 2
+                else:
+                    p_UV_coords = POINTER(c_float)()
                 #
-                # # Extract normals
-                # if self.normal_pref:
-                #     pnormals = cast((c_float * 3 * vertexCount)(), POINTER(c_float))
-                #     i = 0
-                #     for v in mesh.verts:
-                #         pnormals[i] = c_float(v.no.x)
-                #         pnormals[i + 1] = c_float(v.no.y)
-                #         pnormals[i + 2] = c_float(v.no.z)
-                #         i += 3
-                # else:
-                p_normals = POINTER(c_float)()
-                #
-                # # Extract UVs
-                # if self.uv_pref:
-                #     ptexCoords = cast((c_float * 2 * vertexCount)(), POINTER(c_float))
-                #     if mesh.faceUV:
-                #         for f in mesh.faces:
-                #             for j, v in enumerate(f.v):
-                #                 k = v.index
-                #                 if k < vertexCount:
-                #                     uv = f.uv[j]
-                #                     ptexCoords[k * 2] = uv[0]
-                #                     ptexCoords[k * 2 + 1] = uv[1]
-                #     else:
-                #         i = 0
-                #         for v in mesh.verts:
-                #             ptexCoords[i] = c_float(v.uvco[0])
-                #             ptexCoords[i + 1] = c_float(v.uvco[1])
-                #             i += 2
-                # else:
-                p_UV_coords = POINTER(c_float)()
-                #
-                # # Extract colors
-                # if self.colour_pref:
-                #     pcolors = cast((c_float * 4 * vertexCount)(), POINTER(c_float))
-                #     for f in mesh.faces:
-                #         for j, v in enumerate(f.v):
-                #             k = v.index
-                #             if k < vertexCount:
-                #                 col = f.col[j]
-                #                 pcolors[k * 4] = col.r / 255.0
-                #                 pcolors[k * 4 + 1] = col.g / 255.0
-                #                 pcolors[k * 4 + 2] = col.b / 255.0
-                #                 pcolors[k * 4 + 3] = 1.0
-                # else:
-                p_colors = POINTER(c_float)()
+                # Extract colors
+                if self.colour_pref:
+                    p_colors = cast((c_float * 4 * vertex_count)(), POINTER(c_float))
+                    if mesh.vertex_colors:
+                        color_layer = mesh.vertex_colors.active.data
+                        for f in mesh.polygons:
+                            for j, loop_index in enumerate(f.loop_indices):
+                                k = mesh.loops[loop_index].vertex_index
+                                if k < vertex_count:
+                                    col = color_layer[loop_index]
+                                    p_colors[k * 4] = col.color[0]
+                                    p_colors[k * 4 + 1] = col.color[1]
+                                    p_colors[k * 4 + 2] = col.color[2]
+                                    p_colors[k * 4 + 3] = 1.0
+                else:
+                    p_colors = POINTER(c_float)()
                 try:
                     # Create an OpenCTM context
                     ctm = ctmNewContext(CTM_EXPORT)
@@ -296,7 +301,7 @@ class OpenCTMExport(bpy.types.Operator, ImportHelper):
                     ctmFileComment(ctm, c_char_p(_encode('Created by OpenCTM Addon (https://github.com/RealIndrit/blender-openctm) for Blender (https://www.blender.org/)')))
 
                     # Define the mesh
-                    ctmDefineMesh(ctm, p_vertices, c_int(vertex_count), p_indices, c_int(triangle_count), p_normals)
+                    ctmDefineMesh(ctm, p_vertices, c_uint(vertex_count), p_indices, c_uint(triangle_count), p_normals)
 
                     # Add UV coordinates?
                     if self.uv_pref:
@@ -306,7 +311,7 @@ class OpenCTMExport(bpy.types.Operator, ImportHelper):
 
                     # Add colors?
                     if self.normal_pref:
-                        cm = ctmAddAttribMap(ctm, p_colors, c_char_p('Color'))
+                        cm = ctmAddAttribMap(ctm, p_colors, c_char_p(_encode('Color')))
                         if self.compression_pref == "MG2":
                             ctmAttribPrecision(ctm, cm, self.export_cprec)
 
@@ -325,7 +330,7 @@ class OpenCTMExport(bpy.types.Operator, ImportHelper):
                         ctmCompressionMethod(ctm, CTM_METHOD_RAW)
 
                     # Save the file
-                    ctmSave(ctm, c_char_p(self.filepath))
+                    ctmSave(ctm, c_char_p(_encode(self.filepath)))
 
                     # Check for errors
                     e = ctmGetError(ctm)
