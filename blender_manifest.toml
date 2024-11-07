@@ -1,8 +1,9 @@
 schema_version = "1.0.0"
-id = "import_openctm_ctm"
-name = "Import OpenCTM (.ctm)"
+id = "openctm_ctm"
+name = "OpenCTM (.ctm)"
 version = "1.1.0"
-tagline = "Import meshes from OpenCTM (.ctm)"
+author = "RealIndrit"
+tagline = "Import/Export meshes from/to OpenCTM (.ctm)"
 maintainer = "Community"
 type = "add-on"
 tags = ["Import-Export"]
