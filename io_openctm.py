@@ -7,6 +7,8 @@ from bpy.props import (
     IntProperty,
     IntVectorProperty,
     StringProperty,
+    PointerProperty,
+    EnumProperty
 )
 
 @orientation_helper(axis_forward="Z", axis_up="Y")
@@ -16,20 +18,25 @@ class OpenCTMImport(bpy.types.Operator, ImportHelper):
     bl_label = "Import OpenCTM"
     filename_ext = ".ctm"
 
-    filepath: bpy.props.StringProperty(subtype="FILE_PATH")
+    filepath: StringProperty(subtype="FILE_PATH")
     filter_glob: StringProperty(default="*.ctm", options={'HIDDEN'})
 
-    uv_pref = BoolProperty(name="UV", description="Import UV", default=True)
-    colour_pref = BoolProperty(name="Color", description="Import vertex colors", default=True)
-    select_pref = BoolProperty(name="Select", description="Select imported object after completion", default=True)
+    uv_pref: BoolProperty(name="UV", description="Import UV", default=True)
+    colour_pref: BoolProperty(name="Color", description="Import vertex colors", default=True)
+    select_pref: BoolProperty(name="Select", description="Select imported object after completion",
+                                        default=True)
 
     def draw(self, context):
         box = self.layout.box()
         box.prop(self, "axis_forward")
         box.prop(self, "axis_up")
-        box.prop(self, "uv_pref")
-        box.prop(self, "colour_pref")
-        box.prop(self, "select_pref")
+
+        box = self.layout.box()
+        row1 = box.row()
+        row1.prop(self, "uv_pref")
+        row1.prop(self, "colour_pref")
+        row2 = box.row()
+        row2.prop(self, "select_pref")
 
     def execute(self, context):
         # Ensure there's at least one object
@@ -121,26 +128,73 @@ class OpenCTMExport(bpy.types.Operator, ImportHelper):
     bl_label = "Export OpenCTM"
 
     filename_ext = ".ctm"
-    filepath: bpy.props.StringProperty(subtype="FILE_PATH")
-    filter_glob = bpy.props.StringProperty(default="*.ctm", options={'HIDDEN'})
+    filepath: StringProperty(subtype="FILE_PATH")
+    filter_glob: StringProperty(default="*.ctm", options={'HIDDEN'})
 
-    uv_pref = BoolProperty(name="UV", description="Export UV", default=True)
-    normal_pref = BoolProperty(name="UV", description="Export Normals", default=True)
-    colour_pref = BoolProperty(name="Color", description="Export Vertex colors", default=True)
+    uv_pref: BoolProperty(name="UV", description="Export UV", default=True)
+    normal_pref: BoolProperty(name="Normal", description="Export Normals", default=True)
+    colour_pref: BoolProperty(name="Color", description="Export Vertex colors", default=True)
+    compression_pref: EnumProperty(
+        name="Compression Algorithm",
+        description="What type of compression the file use",
+        items=[("MG1", "MG1", "MG1 Compression"),
+               ("MG2", "MG2", "MG2 Compression"),
+               ("RAW", "Uncompressed", "No Compression (Raw)"),],
+        default="MG1"
+    )
+
+    export_vprec: bpy.props.FloatProperty(
+        name="Vertex Precision",
+        description="Relative vertex precision (fixed point)",
+        default=0.01,
+        min=0.0001,
+        max=1.0
+    )
+    export_nprec: bpy.props.FloatProperty(
+        name="Normal Precision",
+        description="Normal precision (fixed point)",
+        default=1.0 / 256.0,
+        min=0.0001,
+        max=1.0
+    )
+    export_uvprec: bpy.props.FloatProperty(
+        name="UV Precision",
+        description="UV precision (fixed point)",
+        default=1.0 / 1024.0,
+        min=0.0001,
+        max=1.0
+    )
+    export_cprec: bpy.props.FloatProperty(
+        name="Color Precision",
+        description="Color precision (fixed point)",
+        default=1.0 / 256.0,
+        min=0.0001,
+        max=1.0
+    )
 
     def draw(self, context):
         box = self.layout.box()
         box.prop(self, "axis_forward")
         box.prop(self, "axis_up")
-        box.prop(self, "uv_pref")
-        box.prop(self, "colour_pref")
+
+        box = self.layout.box()
+        row1 = box.row()
+        row1.prop(self, "uv_pref")
+        row1.prop(self, "colour_pref")
+        row2 = box.row()
+        row2.prop(self, "normal_pref")
+
+        box = self.layout.box()
+        box.prop(self, "compression_pref")
+
+        if self.compression_pref == "MG2":
+            box.prop(self, "export_vprec")
+            box.prop(self, "export_nprec")
+            box.prop(self, "export_uvprec")
+            box.prop(self, "export_cprec")
+
 
     def execute(self, context):
-        filepath = self.filepath
-        print(f"Exporting to {filepath}")
-        print(f"UV Preference: {self.uv_pref}")
-        print(f"Color Preference: {self.colour_pref}")
-
         transform_matrix = axis_conversion(
             from_forward=self.axis_forward,
             from_up=self.axis_up,
@@ -151,6 +205,138 @@ class OpenCTMExport(bpy.types.Operator, ImportHelper):
         if active_object is not None:
             if len(bpy.context.selected_objects) == 1:
                 active_object.data.transform(transform_matrix)
+                if not self.filepath.lower().endswith('.ctm'):
+                    self.filepath += '.ctm'
+
+
+                mesh = active_object.data
+
+                triangle_count = 0
+                for f in mesh.polygons:
+                    if len(f.vertices) == 4:
+                        triangle_count += 2
+                    else:
+                        triangle_count += 1
+
+                print(triangle_count)
+                p_indices = cast((c_int * 3 * triangle_count)(), POINTER(c_int))
+
+                for i, f in enumerate(mesh.polygons):
+                    p_indices[3 * i] = ctypes.c_int(f.vertices[0])
+                    p_indices[3 * i + 1] = ctypes.c_int(f.vertices[1])
+                    p_indices[3 * i + 2] = ctypes.c_int(f.vertices[2])
+                    if len(f.vertices) == 4:
+                        p_indices[3 * (i + 1)] = ctypes.c_int(f.vertices[0])
+                        p_indices[3 * (i + 1) + 1] = ctypes.c_int(f.vertices[2])
+                        p_indices[3 * (i + 1) + 2] = ctypes.c_int(f.vertices[3])
+                        i += 1
+
+                # Extract vertex array from the Blender mesh
+                vertex_count = len(mesh.vertices)
+                print(vertex_count)
+                p_vertices = cast((c_float * 3 * vertex_count)(), POINTER(c_float))
+
+                for i, v in enumerate(mesh.vertices):
+                    p_vertices[3 * i] = ctypes.c_float(v.co.x)
+                    p_vertices[3 * i + 1] = ctypes.c_float(v.co.y)
+                    p_vertices[3 * i + 2] = ctypes.c_float(v.co.z)
+
+                #
+                # # Extract normals
+                # if self.normal_pref:
+                #     pnormals = cast((c_float * 3 * vertexCount)(), POINTER(c_float))
+                #     i = 0
+                #     for v in mesh.verts:
+                #         pnormals[i] = c_float(v.no.x)
+                #         pnormals[i + 1] = c_float(v.no.y)
+                #         pnormals[i + 2] = c_float(v.no.z)
+                #         i += 3
+                # else:
+                p_normals = POINTER(c_float)()
+                #
+                # # Extract UVs
+                # if self.uv_pref:
+                #     ptexCoords = cast((c_float * 2 * vertexCount)(), POINTER(c_float))
+                #     if mesh.faceUV:
+                #         for f in mesh.faces:
+                #             for j, v in enumerate(f.v):
+                #                 k = v.index
+                #                 if k < vertexCount:
+                #                     uv = f.uv[j]
+                #                     ptexCoords[k * 2] = uv[0]
+                #                     ptexCoords[k * 2 + 1] = uv[1]
+                #     else:
+                #         i = 0
+                #         for v in mesh.verts:
+                #             ptexCoords[i] = c_float(v.uvco[0])
+                #             ptexCoords[i + 1] = c_float(v.uvco[1])
+                #             i += 2
+                # else:
+                p_UV_coords = POINTER(c_float)()
+                #
+                # # Extract colors
+                # if self.colour_pref:
+                #     pcolors = cast((c_float * 4 * vertexCount)(), POINTER(c_float))
+                #     for f in mesh.faces:
+                #         for j, v in enumerate(f.v):
+                #             k = v.index
+                #             if k < vertexCount:
+                #                 col = f.col[j]
+                #                 pcolors[k * 4] = col.r / 255.0
+                #                 pcolors[k * 4 + 1] = col.g / 255.0
+                #                 pcolors[k * 4 + 2] = col.b / 255.0
+                #                 pcolors[k * 4 + 3] = 1.0
+                # else:
+                p_colors = POINTER(c_float)()
+                try:
+                    # Create an OpenCTM context
+                    ctm = ctmNewContext(CTM_EXPORT)
+
+                    # Set the file comment
+                    ctmFileComment(ctm, c_char_p(_encode('Created by OpenCTM Addon (https://github.com/RealIndrit/blender-openctm) for Blender (https://www.blender.org/)')))
+
+                    # Define the mesh
+                    ctmDefineMesh(ctm, p_vertices, c_int(vertex_count), p_indices, c_int(triangle_count), p_normals)
+
+                    # Add UV coordinates?
+                    if self.uv_pref:
+                        tm = ctmAddUVMap(ctm, p_UV_coords, c_char_p(), c_char_p())
+                        if self.compression_pref == "MG2":
+                            ctmUVCoordPrecision(ctm, tm, self.export_uvprec)
+
+                    # Add colors?
+                    if self.normal_pref:
+                        cm = ctmAddAttribMap(ctm, p_colors, c_char_p('Color'))
+                        if self.compression_pref == "MG2":
+                            ctmAttribPrecision(ctm, cm, self.export_cprec)
+
+                    # Set compression method
+                    if self.compression_pref == "MG2":
+                        ctmVertexPrecisionRel(ctm, self.export_vprec)
+                        if self.normal_pref:
+                            ctmNormalPrecision(ctm, self.export_nprec)
+
+
+                    if self.compression_pref == "MG2":
+                        ctmCompressionMethod(ctm, CTM_METHOD_MG2)
+                    elif self.compression_pref == "MG1":
+                        ctmCompressionMethod(ctm, CTM_METHOD_MG1)
+                    elif self.compression_pref == "RAW":
+                        ctmCompressionMethod(ctm, CTM_METHOD_RAW)
+
+                    # Save the file
+                    ctmSave(ctm, c_char_p(self.filepath))
+
+                    # Check for errors
+                    e = ctmGetError(ctm)
+                    if e != 0:
+                        s = ctmErrorString(e)
+                        self.report({'ERROR'}, f"Could not save the file: {s}")
+
+                finally:
+                    # Free the OpenCTM context
+                    ctmFreeContext(ctm)
+
                 self.report({'INFO'}, f"Exported: {self.filepath}")
                 return {'FINISHED'}
             elif len(bpy.context.selected_objects) > 1:
