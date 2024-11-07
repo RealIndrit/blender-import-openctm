@@ -1,4 +1,4 @@
-Import OpenCTM (.ctm)
+OpenCTM (.ctm) Blender
 ====================
 
 This Blender plugin (add-on) allows you to import/export files in OpenCTM file format.
@@ -8,7 +8,7 @@ This Blender plugin (add-on) allows you to import/export files in OpenCTM file f
 - UV Coordinates
 - Color Data (attributemap with name 'Color' with data RGBA)
 
-## What it imports:
+## What it exports:
 - Meshdata
 - UV Coordinates
 - Normals
