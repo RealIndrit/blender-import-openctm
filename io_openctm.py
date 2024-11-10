@@ -276,7 +276,7 @@ class OpenCTMExport(bpy.types.Operator, ImportHelper):
                                 i += 2
                 else:
                     p_UV_coords = POINTER(c_float)()
-                #
+                
                 # Extract colors
                 if self.colour_pref:
                     p_colors = cast((c_float * 4 * vertex_count)(), POINTER(c_float))

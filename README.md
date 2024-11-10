@@ -3,6 +3,8 @@ OpenCTM (.ctm) Blender
 
 This Blender plugin (add-on) allows you to import/export files in OpenCTM file format.
 
+***For Blender 4.2 and up***
+
 ## What it imports:
 - Meshdata
 - UV Coordinates
