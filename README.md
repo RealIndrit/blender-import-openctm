@@ -31,7 +31,6 @@ This Blender plugin (add-on) allows you to import/export files in OpenCTM file f
 ![Old Man model with color data](assets/old_man_big.png)
 
 **Note** Some probles that might occur
-- Model might be scaled weird way when imported, make sure to scale it to viewport size after importing it. 
 - Normals might be flipped, fix it by force a recalculate normals in Blender.
 
 
