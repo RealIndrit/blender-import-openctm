@@ -39,6 +39,7 @@ class OpenCTMImport(bpy.types.Operator, ImportHelper):
         row2.prop(self, "select_pref")
 
     def execute(self, context):
+        self.report({'INFO'}, f"Importing: {self.filepath}...")
         # Ensure there's at least one object
         if bpy.data.objects:
             if bpy.context.object and bpy.context.object.mode != 'OBJECT':
@@ -198,6 +199,7 @@ class OpenCTMExport(bpy.types.Operator, ImportHelper):
 
 
     def execute(self, context):
+        self.report({'INFO'}, f"Exporting: {self.filepath}...")
         transform_matrix = axis_conversion(
             from_forward=self.axis_forward,
             from_up=self.axis_up,
