@@ -1,6 +1,4 @@
 import bpy
-
-import io_openctm
 from .io_openctm import OpenCTMImport, OpenCTMExport
 
 bl_info = {
