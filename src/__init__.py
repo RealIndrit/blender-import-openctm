@@ -5,7 +5,7 @@ bl_info = {
     "name": "OpenCTM (.ctm)",
     "description": "Import/Export meshes from/to OpenCTM (.ctm)",
     "author": "RealIndrit",
-    "version": (1, 2, 0),
+    "version": (1, 3, 0),
     "blender": (3, 6, 0),
     "location": "File > Import-Export",
     "warning": "",
