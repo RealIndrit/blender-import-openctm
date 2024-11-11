@@ -81,7 +81,6 @@ class OpenCTMImport(bpy.types.Operator, ImportHelper):
                     for map_index in range(8):
                         uv_coords = ctmGetFloatArray(ctm_context, (0x0700 + map_index))
                         if uv_coords:
-                            print(f"UV{map_index}")
                             uv_name = ctmGetUVMapString(ctm_context, (0x0700 + map_index), CTM_NAME)
                             uv_coords = np.fromiter(uv_coords, dtype=float, count=vertex_count * 2).reshape((-1, 2))
                             if uv_name:
