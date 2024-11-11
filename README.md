@@ -3,7 +3,7 @@ OpenCTM (.ctm) Blender
 
 This Blender plugin (add-on) allows you to import/export files in OpenCTM file format.
 
-***For Blender 4.2 and up***
+Supported versions: **4.2 LTS**, **3.6 LTS** (Windows only atm)
 
 ## What it imports:
 - Meshdata
@@ -44,11 +44,14 @@ venv/bin/pip install bpy blender-stubs
 
 Build the addon .zip file:
 ```
-blender --command extension build
+build-script.bat
 ```
 
+It will give 2 zip files, one for addon (3.6), the other is the extensions system (4.2)
+
 Install dev build:
-* Blender > Edit > Preferences > Add-Ons > Install from disk > .zip file
+* Blender > Edit > Preferences > Add-Ons > Install from disk > .zip file (4.2 extension zip file)
+* Blender > Edit > Preferences > Add-ons > Install > .zip file ( 3.6 addon zipfile)
 
 # Disclaimer
 
