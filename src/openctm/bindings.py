@@ -93,10 +93,17 @@ CTM_ATTRIB_MAP_6 = 0x0805
 CTM_ATTRIB_MAP_7 = 0x0806
 CTM_ATTRIB_MAP_8 = 0x0807
 
+# Determine the library path based on the operating system
 if sys.platform.startswith('win32'):
     _lib = os.path.join(os.path.dirname(__file__), 'libs', 'openctm.dll')
+elif sys.platform.startswith('linux'):
+    _lib = os.path.join(os.path.dirname(__file__), 'libs', 'openctm.so')
+elif sys.platform.startswith('darwin'):
+    _lib = os.path.join(os.path.dirname(__file__), 'libs', 'openctm.dylib')
 else:
-    raise NotImplementedError(sys.platform)
+    _lib = find_library('openctm')
+    if not _lib:
+        raise Exception('Could not find the OpenCTM shared library.')
 
 _lib = ctypes.CDLL(_lib)
 
