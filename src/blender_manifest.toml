@@ -31,5 +31,6 @@ paths_exclude_pattern = [
   "/*.png",
   "/*.json",
   "/assets/",
-  "/test/"
+  "/test/",
+  "/.idea/"
 ]

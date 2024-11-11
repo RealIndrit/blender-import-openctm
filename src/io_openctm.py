@@ -81,6 +81,7 @@ class OpenCTMImport(bpy.types.Operator, ImportHelper):
                     for map_index in range(8):
                         uv_coords = ctmGetFloatArray(ctm_context, (0x0700 + map_index))
                         if uv_coords:
+                            print(f"UV{map_index}")
                             uv_name = ctmGetUVMapString(ctm_context, (0x0700 + map_index), CTM_NAME)
                             uv_coords = np.fromiter(uv_coords, dtype=float, count=vertex_count * 2).reshape((-1, 2))
                             if uv_name:
@@ -355,6 +356,14 @@ class OpenCTMExport(bpy.types.Operator, ImportHelper):
         else:
             self.report({'ERROR'}, f"No object selected")
             return {'CANCELLED'}
+
+def register():
+    bpy.utils.register_class(OpenCTMImport)
+    bpy.utils.register_class(OpenCTMExport)
+
+def unregister():
+    bpy.utils.unregister_class(OpenCTMExport)
+    bpy.utils.unregister_class(OpenCTMImport)
 
 def _encode(_filename):
     try:
