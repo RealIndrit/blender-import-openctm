@@ -216,28 +216,25 @@ class OpenCTMExport(bpy.types.Operator, ImportHelper):
 
                 mesh = active_object.data
 
-                triangle_count = 0
+                triangle_count = sum(2 if len(f.vertices) == 4 else 1 for f in mesh.polygons)
+                p_indices = cast((c_uint * (3 * triangle_count))(), POINTER(c_uint))
+
+                index = 0
                 for f in mesh.polygons:
-                    if len(f.vertices) == 4:
-                        triangle_count += 2
-                    else:
-                        triangle_count += 1
+                    p_indices[index] = ctypes.c_uint(f.vertices[0])
+                    p_indices[index + 1] = ctypes.c_uint(f.vertices[1])
+                    p_indices[index + 2] = ctypes.c_uint(f.vertices[2])
+                    index += 3
 
-                p_indices = cast((c_uint * 3 * triangle_count)(), POINTER(c_uint))
-
-                for i, f in enumerate(mesh.polygons):
-                    p_indices[3 * i] = ctypes.c_uint(f.vertices[0])
-                    p_indices[3 * i + 1] = ctypes.c_uint(f.vertices[1])
-                    p_indices[3 * i + 2] = ctypes.c_uint(f.vertices[2])
                     if len(f.vertices) == 4:
-                        p_indices[3 * (i + 1)] = ctypes.c_uint(f.vertices[0])
-                        p_indices[3 * (i + 1) + 1] = ctypes.c_uint(f.vertices[2])
-                        p_indices[3 * (i + 1) + 2] = ctypes.c_uint(f.vertices[3])
-                        i += 1
+                        p_indices[index] = ctypes.c_uint(f.vertices[0])
+                        p_indices[index + 1] = ctypes.c_uint(f.vertices[2])
+                        p_indices[index + 2] = ctypes.c_uint(f.vertices[3])
+                        index += 3
 
                 # Extract vertex array from the Blender mesh
                 vertex_count = len(mesh.vertices)
-                p_vertices = cast((c_float * 3 * vertex_count)(), POINTER(c_float))
+                p_vertices = cast((c_float * (3 * vertex_count))(), POINTER(c_float))
 
                 for i, v in enumerate(mesh.vertices):
                     p_vertices[3 * i] = ctypes.c_float(v.co.x)
